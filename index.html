@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Basketball Hoops - прокачка и скины</title>
+    <title>Basketball Hoops - прокачка, скины, донат</title>
     <style>
         * {
             margin: 0;
@@ -23,12 +23,12 @@
             touch-action: manipulation;
         }
 
-        /* Контейнер игры */
         .game-container {
             background: #2c1810;
             border-radius: 48px;
             padding: 16px 12px 20px 12px;
             box-shadow: 0 20px 35px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+            position: relative;
         }
 
         canvas {
@@ -41,7 +41,6 @@
             touch-action: none;
         }
 
-        /* Верхняя панель с ресурсами */
         .stats-bar {
             display: flex;
             justify-content: space-between;
@@ -61,22 +60,10 @@
             justify-content: center;
         }
 
-        .stat-emoji {
-            font-size: 22px;
-        }
+        .stat-emoji { font-size: 22px; }
+        .stat-value { font-weight: bold; font-size: 18px; color: #ffd700; }
+        .stat-label { font-size: 12px; color: #aaa; }
 
-        .stat-value {
-            font-weight: bold;
-            font-size: 18px;
-            color: #ffd700;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #aaa;
-        }
-
-        /* Панель управления уровнем и магазином */
         .game-controls {
             margin-top: 12px;
             display: flex;
@@ -112,7 +99,12 @@
             box-shadow: 0 3px 0 #6c3483;
         }
 
-        /* Модальное окно магазина */
+        .donate-btn {
+            background: #e67e22;
+            color: white;
+            box-shadow: 0 3px 0 #b45f1b;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -164,26 +156,10 @@
             gap: 15px;
         }
 
-        .shop-item-icon {
-            font-size: 40px;
-            width: 60px;
-            text-align: center;
-        }
-
-        .shop-item-info {
-            flex: 1;
-        }
-
-        .shop-item-name {
-            font-weight: bold;
-            color: white;
-        }
-
-        .shop-item-price {
-            font-size: 12px;
-            color: #ffd700;
-        }
-
+        .shop-item-icon { font-size: 40px; width: 60px; text-align: center; }
+        .shop-item-info { flex: 1; }
+        .shop-item-name { font-weight: bold; color: white; }
+        .shop-item-price { font-size: 12px; color: #ffd700; }
         .buy-btn {
             background: #27ae60;
             border: none;
@@ -193,76 +169,148 @@
             font-weight: bold;
             cursor: pointer;
         }
+        .buy-btn:disabled { background: #555; cursor: not-allowed; }
 
-        .buy-btn:disabled {
-            background: #555;
-            cursor: not-allowed;
+        .donate-option {
+            background: #0f0f1a;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .donate-stars {
+            background: #f1c40f;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 40px;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .combo-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 14px;
+            color: #ffd700;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        /* Шкала силы сбоку */
+        .power-bar-container {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 200px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 20px;
+            border: 2px solid #ffd700;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(255,215,0,0.3);
+            z-index: 50;
+        }
+        
+        .power-bar-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: linear-gradient(0deg, #00ff88, #ffd700, #ff6600);
+            transition: height 0.05s linear;
+            border-radius: 20px;
+        }
+        
+        .power-bar-label {
+            position: fixed;
+            right: 20px;
+            top: calc(50% - 120px);
+            color: #ffd700;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            width: 40px;
+            z-index: 51;
+            text-shadow: 0 0 3px black;
+        }
+        
+        @media (max-width: 500px) {
+            .power-bar-container { width: 30px; height: 150px; right: 10px; }
+            .power-bar-label { right: 10px; font-size: 10px; top: calc(50% - 95px); }
         }
     </style>
 </head>
 <body>
 <div>
+    <!-- Шкала силы сбоку -->
+    <div class="power-bar-container" id="powerBarContainer">
+        <div class="power-bar-fill" id="powerBarFill"></div>
+    </div>
+    <div class="power-bar-label" id="powerBarLabel">СИЛА<br>💪</div>
+    
     <div class="game-container">
-        <!-- Панель статистики -->
         <div class="stats-bar">
-            <div class="stat-card">
-                <span class="stat-emoji">🏆</span>
-                <div>
-                    <div class="stat-value" id="levelValue">1</div>
-                    <div class="stat-label">Уровень</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <span class="stat-emoji">⭐</span>
-                <div>
-                    <div class="stat-value" id="scoreValue">0</div>
-                    <div class="stat-label">Очки</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <span class="stat-emoji">💰</span>
-                <div>
-                    <div class="stat-value" id="coinsValue">0</div>
-                    <div class="stat-label">Монеты</div>
-                </div>
-            </div>
+            <div class="stat-card"><span class="stat-emoji">🏆</span><div><div class="stat-value" id="levelValue">1</div><div class="stat-label">Уровень</div></div></div>
+            <div class="stat-card"><span class="stat-emoji">⭐</span><div><div class="stat-value" id="scoreValue">0</div><div class="stat-label">Очки</div></div></div>
+            <div class="stat-card"><span class="stat-emoji">💰</span><div><div class="stat-value" id="coinsValue">0</div><div class="stat-label">Монеты</div></div></div>
         </div>
 
-        <!-- Canvas для игры -->
         <canvas id="gameCanvas" width="400" height="500"></canvas>
 
-        <!-- Кнопки управления -->
         <div class="game-controls">
             <button class="ctrl-btn" id="shopButton">🛒 МАГАЗИН</button>
-            <button class="ctrl-btn shop-btn" id="nextLevelBtn">🔥 СЛЕД. УРОВЕНЬ</button>
+            <button class="ctrl-btn donate-btn" id="donateButton">⭐ ДОНАТ</button>
+            <button class="ctrl-btn shop-btn" id="nextLevelBtn">🔥 УРОВЕНЬ</button>
         </div>
         <div style="font-size: 11px; text-align: center; margin-top: 10px; color: #aaa;">
-            👆 ТЯНИ И ОТПУСКАЙ — МЯЧ ЛЕТИТ
+            👆 ТЯНИ ОТ ЛЮБОЙ ТОЧКИ → ШКАЛА СИЛЫ СПРАВА
         </div>
     </div>
 
-    <!-- Модальное окно магазина -->
+    <!-- Магазин скинов -->
     <div id="shopModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <span>🛒 МАГАЗИН СТИЛЕЙ</span>
-                <button class="close-modal" id="closeModalBtn">✖</button>
-            </div>
+            <div class="modal-header"><span>🛒 МАГАЗИН СТИЛЕЙ</span><button class="close-modal" id="closeModalBtn">✖</button></div>
             <div id="shopItemsList"></div>
         </div>
     </div>
+
+    <!-- Донат модалка -->
+    <div id="donateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><span>⭐ КУПИТЬ МОНЕТЫ</span><button class="close-modal" id="closeDonateBtn">✖</button></div>
+            <div id="donateOptions"></div>
+            <div style="margin-top: 15px; font-size: 12px; color: #aaa; text-align: center;">
+                💡 Оплата через Telegram Stars<br>
+                После оплаты монеты начислятся автоматически
+            </div>
+        </div>
+    </div>
+
+    <div id="comboDisplay" class="combo-indicator">🎯 МНОЖИТЕЛЬ: <span id="comboPoints">1.0</span>x</div>
 </div>
 
 <script>
-    // ==================== НАСТРОЙКИ ИГРЫ ====================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // Размеры
     canvas.width = 400;
     canvas.height = 500;
 
-    // Параметры кольца
+    // Элементы шкалы силы
+    const powerBarFill = document.getElementById('powerBarFill');
+    const powerBarContainer = document.getElementById('powerBarContainer');
+
+    // ========== КОЛЬЦО ==========
     const hoop = {
         x: canvas.width / 2 - 20,
         y: 80,
@@ -271,7 +319,7 @@
         rimRadius: 18
     };
 
-    // МЯЧ
+    // ========== МЯЧ ==========
     let ball = {
         x: canvas.width / 2,
         y: canvas.height - 50,
@@ -280,16 +328,30 @@
         vy: 0,
         isDragging: false,
         dragX: 0,
-        dragY: 0
+        dragY: 0,
+        startX: 0,
+        startY: 0,
+        dragStartTime: 0
+    };
+    
+    let currentPower = 0; // 0-1 для шкалы силы
+
+    // ========== СИСТЕМА КОМБО-ОЧКОВ ==========
+    let comboSystem = {
+        multiplier: 1.0,
+        perfectCounter: 0,
+        lastShotTime: 0,
+        shotsInRow: 0,
+        maxMultiplierReached: false
     };
 
-    // Игровой счёт
+    // ========== ИГРОВОЙ ПРОГРЕСС ==========
     let gameState = {
-        score: 0,           // очки за уровень
-        totalScore: 0,      // общий счёт
-        coins: 0,           // монеты
+        score: 0,
+        totalScore: 0,
+        coins: 0,
         level: 1,
-        targetScore: 100,   // нужно очков для перехода
+        targetScore: 100,
         currentBallSkin: '🏀',
         skins: [
             { id: '🏀', name: 'Классический', price: 0, emoji: '🏀', owned: true },
@@ -303,63 +365,153 @@
         ]
     };
 
-    // Флаги анимации
     let lastShotResult = null;
     let effectTimer = 0;
     let levelUpMessage = '';
     let levelUpTimer = 0;
+    let lastPointsEarned = 0;
+    let pointsDisplayTimer = 0;
 
-    // Параметры сложности уровня
     let currentDifficulty = {
         gravity: 0.25,
         requiredScore: 100,
         rimScale: 1.0
     };
 
-    // Элементы UI
+    // ========== UI ЭЛЕМЕНТЫ ==========
     const levelValueSpan = document.getElementById('levelValue');
     const scoreValueSpan = document.getElementById('scoreValue');
     const coinsValueSpan = document.getElementById('coinsValue');
     const shopModal = document.getElementById('shopModal');
+    const donateModal = document.getElementById('donateModal');
     const shopButton = document.getElementById('shopButton');
+    const donateButton = document.getElementById('donateButton');
     const closeModalBtn = document.getElementById('closeModalBtn');
+    const closeDonateBtn = document.getElementById('closeDonateBtn');
     const nextLevelBtn = document.getElementById('nextLevelBtn');
+    const comboPointsSpan = document.getElementById('comboPoints');
 
-    // ==================== ФУНКЦИИ ПРОГРЕССА ====================
     function updateUI() {
         levelValueSpan.textContent = gameState.level;
         scoreValueSpan.textContent = gameState.score;
         coinsValueSpan.textContent = gameState.coins;
     }
+    
+    // Обновление шкалы силы
+    function updatePowerBar(force) {
+        let powerPercent = Math.min(100, Math.max(0, force * 120));
+        powerBarFill.style.height = powerPercent + '%';
+        currentPower = force;
+        
+        // Меняем цвет в зависимости от силы
+        if (force < 0.3) powerBarFill.style.background = "linear-gradient(0deg, #00ff88, #88ff00)";
+        else if (force < 0.6) powerBarFill.style.background = "linear-gradient(0deg, #88ff00, #ffd700)";
+        else if (force < 0.85) powerBarFill.style.background = "linear-gradient(0deg, #ffd700, #ff8800)";
+        else powerBarFill.style.background = "linear-gradient(0deg, #ff8800, #ff3300)";
+    }
+    
+    function resetPowerBar() {
+        powerBarFill.style.height = '0%';
+        currentPower = 0;
+    }
 
-    function addPoints(points) {
-        gameState.score += points;
-        gameState.totalScore += points;
-        // Каждые 10 очков даём 1 монету
-        let coinsEarned = Math.floor(points / 10);
-        if (coinsEarned > 0) gameState.coins += coinsEarned;
+    // ========== СИСТЕМА НАЧИСЛЕНИЯ ОЧКОВ ==========
+    function calculatePoints(success, shotDuration, distanceToCenter, power) {
+        if (!success) {
+            comboSystem.shotsInRow = 0;
+            comboSystem.multiplier = 1.0;
+            comboSystem.perfectCounter = 0;
+            comboSystem.maxMultiplierReached = false;
+            updateComboDisplay();
+            return 0;
+        }
 
-        updateUI();
+        let basePoints = 10;
+        
+        // Бонус за скорость
+        let speedBonus = 0;
+        if (shotDuration < 0.5) speedBonus = 5;
+        else if (shotDuration < 1.0) speedBonus = 3;
+        else if (shotDuration < 1.5) speedBonus = 1;
+        
+        // Бонус за точность
+        let accuracyBonus = 0;
+        if (distanceToCenter < 5) accuracyBonus = 7;
+        else if (distanceToCenter < 10) accuracyBonus = 4;
+        else if (distanceToCenter < 15) accuracyBonus = 2;
+        
+        // Бонус за оптимальную силу (0.6-0.8 - идеально)
+        let powerBonus = 0;
+        if (power > 0.65 && power < 0.85) powerBonus = 4;
+        else if (power > 0.5 && power < 0.95) powerBonus = 2;
+        
+        let isPerfect = (shotDuration < 0.8 && distanceToCenter < 8 && power > 0.65 && power < 0.85);
+        
+        comboSystem.shotsInRow++;
+        let comboBonus = 0;
+        if (comboSystem.shotsInRow >= 5) comboBonus = 5;
+        else if (comboSystem.shotsInRow >= 3) comboBonus = 3;
+        else if (comboSystem.shotsInRow >= 2) comboBonus = 1;
+        
+        if (comboSystem.shotsInRow >= 10) comboSystem.multiplier = 2.5;
+        else if (comboSystem.shotsInRow >= 7) comboSystem.multiplier = 2.0;
+        else if (comboSystem.shotsInRow >= 4) comboSystem.multiplier = 1.5;
+        else comboSystem.multiplier = 1.0;
+        
+        if (isPerfect) {
+            comboSystem.perfectCounter++;
+            if (comboSystem.perfectCounter >= 3 && !comboSystem.maxMultiplierReached) {
+                comboSystem.multiplier = 3.0;
+                comboSystem.maxMultiplierReached = true;
+                showTempMessage("🔥 ИДЕАЛЬНАЯ СЕРИЯ! x3 МНОЖИТЕЛЬ! 🔥");
+            }
+        } else {
+            comboSystem.perfectCounter = 0;
+        }
+        
+        let totalPoints = Math.floor((basePoints + speedBonus + accuracyBonus + powerBonus + comboBonus) * comboSystem.multiplier);
+        totalPoints = Math.min(totalPoints, 30);
+        
+        updateComboDisplay();
+        return totalPoints;
+    }
+    
+    function updateComboDisplay() {
+        comboPointsSpan.textContent = comboSystem.multiplier.toFixed(1);
+        if (comboSystem.multiplier > 1) {
+            document.getElementById('comboDisplay').style.background = "rgba(255, 215, 0, 0.9)";
+            document.getElementById('comboDisplay').style.color = "#1a1a2e";
+        } else {
+            document.getElementById('comboDisplay').style.background = "rgba(0,0,0,0.7)";
+            document.getElementById('comboDisplay').style.color = "#ffd700";
+        }
+    }
 
-        // Проверка повышения уровня
-        if (gameState.score >= gameState.targetScore) {
-            levelUp();
+    function addPointsWithCombo(success, shotDuration, distanceToCenter, power) {
+        let points = calculatePoints(success, shotDuration, distanceToCenter, power);
+        if (points > 0) {
+            gameState.score += points;
+            gameState.totalScore += points;
+            let coinsEarned = Math.floor(points / 10);
+            if (coinsEarned > 0) gameState.coins += coinsEarned;
+            lastPointsEarned = points;
+            pointsDisplayTimer = 30;
+            showTempMessage(`🏀 +${points} ОЧКОВ! 🏀`);
+            updateUI();
+            if (gameState.score >= gameState.targetScore) levelUp();
+        } else if (!success) {
+            showTempMessage("❌ ПРОМАХ! Серия сброшена ❌");
         }
     }
 
     function levelUp() {
         gameState.level++;
         gameState.score = 0;
-        gameState.targetScore = 100 + (gameState.level - 1) * 25; // 100, 125, 150, 175...
-        gameState.coins += 50;  // Бонус за уровень
-
-        // Бонус за прохождение
+        gameState.targetScore = 100 + (gameState.level - 1) * 25;
+        gameState.coins += 50;
         levelUpMessage = `🎉 УРОВЕНЬ ${gameState.level-1} ПРОЙДЕН! +50 МОНЕТ 🎉`;
         levelUpTimer = 60;
-
-        // Усложнение: кольцо становится меньше
         currentDifficulty.rimScale = Math.max(0.7, 1.0 - (gameState.level - 1) * 0.02);
-
         updateUI();
         resetBall();
     }
@@ -370,14 +522,65 @@
         ball.vx = 0;
         ball.vy = 0;
         ball.isDragging = false;
+        resetPowerBar();
     }
 
-    function addCoins(amount) {
-        gameState.coins += amount;
+    function showTempMessage(msg) {
+        lastShotResult = msg;
+        effectTimer = 40;
+    }
+
+    // ========== ДОНАТ ==========
+    function renderDonateOptions() {
+        const container = document.getElementById('donateOptions');
+        container.innerHTML = '';
+        const options = [
+            { stars: 10, coins: 50, price: "10 ⭐" },
+            { stars: 25, coins: 150, price: "25 ⭐" },
+            { stars: 50, coins: 350, price: "50 ⭐" },
+            { stars: 100, coins: 800, price: "100 ⭐" },
+            { stars: 250, coins: 2500, price: "250 ⭐" }
+        ];
+        
+        options.forEach(opt => {
+            const div = document.createElement('div');
+            div.className = 'donate-option';
+            div.innerHTML = `
+                <div><span style="font-size: 24px;">⭐</span> ${opt.stars} Stars</div>
+                <div style="font-weight: bold; color: #ffd700;">→ ${opt.coins} монет</div>
+                <button class="donate-stars" data-stars="${opt.stars}" data-coins="${opt.coins}">Купить за ${opt.price}</button>
+            `;
+            container.appendChild(div);
+        });
+        
+        document.querySelectorAll('.donate-stars').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const stars = parseInt(btn.dataset.stars);
+                const coins = parseInt(btn.dataset.coins);
+                buyWithStars(stars, coins);
+            });
+        });
+    }
+    
+    function buyWithStars(stars, coinsAmount) {
+        if (window.Telegram && Telegram.WebApp) {
+            showTempMessage(`⭐ Открытие платежа на ${stars} Stars...`);
+            // Здесь нужна интеграция с ботом
+        } else {
+            showTempMessage(`⭐ ТЕСТ: +${coinsAmount} монет (в Telegram будет реальная оплата)`);
+            gameState.coins += coinsAmount;
+            updateUI();
+            donateModal.style.display = 'none';
+        }
+    }
+    
+    window.addCoinsFromPayment = function(coins) {
+        gameState.coins += coins;
         updateUI();
-    }
+        showTempMessage(`✅ +${coins} монет за донат! Спасибо! ✅`);
+    };
 
-    // ==================== ПОКУПКА СКИНОВ ====================
+    // ========== МАГАЗИН СКИНОВ ==========
     function buySkin(skinId) {
         const skin = gameState.skins.find(s => s.id === skinId);
         if (!skin || skin.owned) return false;
@@ -393,9 +596,7 @@
 
     function equipSkin(skinId) {
         const skin = gameState.skins.find(s => s.id === skinId);
-        if (skin && skin.owned) {
-            gameState.currentBallSkin = skin.emoji;
-        }
+        if (skin && skin.owned) gameState.currentBallSkin = skin.emoji;
     }
 
     function renderShopItems() {
@@ -411,80 +612,75 @@
                     <div class="shop-item-price">💰 ${skin.price} монет</div>
                 </div>
                 <button class="buy-btn" data-id="${skin.id}" data-action="${skin.owned ? 'equip' : 'buy'}" ${skin.owned && gameState.currentBallSkin === skin.emoji ? 'disabled' : ''}>
-                    ${skin.owned ? (gameState.currentBallSkin === skin.emoji ? '✅ ИСП. ' : '🔧 НАДЕТЬ') : '💎 КУПИТЬ'}
+                    ${skin.owned ? (gameState.currentBallSkin === skin.emoji ? '✅ ИСП.' : '🔧 НАДЕТЬ') : '💎 КУПИТЬ'}
                 </button>
             `;
             container.appendChild(div);
         });
-
         document.querySelectorAll('.buy-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const skinId = btn.dataset.id;
                 const action = btn.dataset.action;
                 if (action === 'buy') {
-                    if (buySkin(skinId)) {
-                        equipSkin(skinId);
-                        renderShopItems();
-                        showTempMessage(`✅ ${gameState.skins.find(s=>s.id===skinId).name} куплен!`);
-                    } else {
-                        showTempMessage(`❌ Не хватает монет!`);
-                    }
+                    if (buySkin(skinId)) { equipSkin(skinId); renderShopItems(); showTempMessage(`✅ ${gameState.skins.find(s=>s.id===skinId).name} куплен!`); }
+                    else showTempMessage(`❌ Не хватает монет!`);
                 } else if (action === 'equip') {
-                    equipSkin(skinId);
-                    renderShopItems();
-                    showTempMessage(`🎨 Скин ${gameState.skins.find(s=>s.id===skinId).name} надет!`);
+                    equipSkin(skinId); renderShopItems(); showTempMessage(`🎨 Скин ${gameState.skins.find(s=>s.id===skinId).name} надет!`);
                 }
             });
         });
     }
 
-    function showTempMessage(msg) {
-        lastShotResult = msg;
-        effectTimer = 40;
-    }
-
-    // ==================== ФИЗИКА И РИСОВАНИЕ ====================
+    // ========== ФИЗИКА ==========
     function updatePhysics() {
         if (ball.isDragging) return;
 
-        // Гравитация
         ball.vy += currentDifficulty.gravity;
         ball.x += ball.vx;
         ball.y += ball.vy;
 
-        // Стены
-        if (ball.x - ball.radius < 0) { ball.x = ball.radius; ball.vx = -ball.vx * 0.7; }
-        if (ball.x + ball.radius > canvas.width) { ball.x = canvas.width - ball.radius; ball.vx = -ball.vx * 0.7; }
-        if (ball.y + ball.radius > canvas.height) {
-            // Упал на пол — сброс
-            resetBall();
-            return;
+        if (ball.x - ball.radius < 0) {
+            ball.x = ball.radius;
+            ball.vx = -ball.vx * 0.6;
         }
-        if (ball.y - ball.radius < 0) { ball.y = ball.radius; ball.vy = -ball.vy * 0.5; }
+        if (ball.x + ball.radius > canvas.width) {
+            ball.x = canvas.width - ball.radius;
+            ball.vx = -ball.vx * 0.6;
+        }
 
-        // ПРОВЕРКА ПОПАДАНИЯ В КОЛЬЦО
+        if (ball.y + ball.radius > canvas.height) {
+            ball.y = canvas.height - ball.radius;
+            ball.vy = -ball.vy * 0.85;
+            if (Math.abs(ball.vy) < 1 && Math.abs(ball.vx) < 1 && ball.y + ball.radius >= canvas.height - 2) {
+                ball.vy = 0;
+                ball.vx = 0;
+            }
+        }
+
+        if (ball.y - ball.radius < 0) {
+            ball.y = ball.radius;
+            ball.vy = -ball.vy * 0.7;
+        }
+
         const ballCenter = { x: ball.x, y: ball.y };
         const rimCenter = { x: hoop.x + hoop.width/2, y: hoop.y + hoop.height/2 };
         const distToRim = Math.hypot(ballCenter.x - rimCenter.x, ballCenter.y - rimCenter.y);
         const effectiveRimRadius = hoop.rimRadius * currentDifficulty.rimScale;
 
         if (distToRim < ball.radius + effectiveRimRadius && ball.vy > 0) {
-            // ПОПАДАНИЕ!
-            addPoints(10);
-            showTempMessage('🏀 СВИШ! +10 ОЧКОВ 🏀');
-            // Отскок
-            ball.vy = -ball.vy * 0.6;
-            ball.vx = ball.vx * 0.9;
-            // Небольшое смещение чтобы не застревало
-            ball.y = rimCenter.y - ball.radius - 5;
+            const shotDuration = (Date.now() - ball.dragStartTime) / 1000;
+            const distanceToCenter = distToRim;
+            addPointsWithCombo(true, shotDuration, distanceToCenter, currentPower);
+            ball.vy = -ball.vy * 0.5;
+            ball.vx = ball.vx * 0.8;
+            ball.y = rimCenter.y - ball.radius - 3;
         }
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Фон баскетбольной площадки
         ctx.fillStyle = '#DEB887';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#BC8F8F';
@@ -492,9 +688,6 @@
             ctx.fillRect(i, canvas.height - 20, 20, 20);
         }
 
-        // КОЛЬЦО
-        ctx.save();
-        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.arc(hoop.x + hoop.width/2, hoop.y + hoop.height/2, hoop.rimRadius * currentDifficulty.rimScale, 0, Math.PI * 2);
         ctx.strokeStyle = '#ff6600';
@@ -502,7 +695,6 @@
         ctx.stroke();
         ctx.fillStyle = '#cc5500';
         ctx.fill();
-        // Сетка
         ctx.beginPath();
         ctx.moveTo(hoop.x + hoop.width/2 - 12, hoop.y + hoop.height/2 + 8);
         ctx.lineTo(hoop.x + hoop.width/2, hoop.y + hoop.height/2 + 25);
@@ -510,7 +702,6 @@
         ctx.fillStyle = '#aaa';
         ctx.fill();
 
-        // МЯЧ
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
         ctx.fillStyle = '#8B4513';
@@ -519,40 +710,60 @@
         ctx.font = `${ball.radius + 6}px "Segoe UI Emoji"`;
         ctx.fillText(gameState.currentBallSkin, ball.x - 12, ball.y + 10);
 
-        // Линия прицела при перетаскивании
+        // Линия прицела и силовой круг
         if (ball.isDragging) {
             ctx.beginPath();
             ctx.moveTo(ball.x, ball.y);
             ctx.lineTo(ball.dragX, ball.dragY);
             ctx.strokeStyle = '#ffd700';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3;
             ctx.setLineDash([5, 5]);
             ctx.stroke();
             ctx.setLineDash([]);
+            
+            let dragDx = ball.x - ball.dragX;
+            let dragDy = ball.y - ball.dragY;
+            let force = Math.min(1, Math.hypot(dragDx, dragDy) / 70);
+            ctx.fillStyle = `rgba(255, 215, 0, ${force * 0.6})`;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius + 5 + force * 20, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Текст силы
+            ctx.font = 'bold 14px "Segoe UI"';
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowBlur = 2;
+            ctx.fillText(`💪 ${Math.round(force * 100)}%`, ball.x - 25, ball.y - 25);
         }
 
-        // Эффект сообщения
         if (effectTimer > 0 && lastShotResult) {
-            ctx.font = 'bold 20px "Segoe UI"';
+            ctx.font = 'bold 18px "Segoe UI"';
             ctx.fillStyle = '#ffd700';
             ctx.shadowBlur = 4;
-            ctx.fillText(lastShotResult, canvas.width/2 - 100, 50);
+            ctx.fillText(lastShotResult, canvas.width/2 - 100, 45);
             effectTimer--;
         }
         if (levelUpTimer > 0 && levelUpMessage) {
-            ctx.font = 'bold 16px "Segoe UI"';
+            ctx.font = 'bold 14px "Segoe UI"';
             ctx.fillStyle = '#00ffaa';
-            ctx.fillText(levelUpMessage, canvas.width/2 - 150, 110);
+            ctx.fillText(levelUpMessage, canvas.width/2 - 140, 100);
             levelUpTimer--;
         }
+        if (pointsDisplayTimer > 0) {
+            ctx.font = 'bold 22px "Segoe UI"';
+            ctx.fillStyle = '#ffaa00';
+            ctx.shadowBlur = 3;
+            ctx.fillText(`+${lastPointsEarned}`, ball.x - 15, ball.y - 25);
+            pointsDisplayTimer--;
+        }
 
-        // Отображение сложности
-        ctx.font = 'bold 12px monospace';
+        ctx.font = 'bold 10px monospace';
         ctx.fillStyle = '#ffffaa';
-        ctx.fillText(`🎯 Сложность: ${Math.round((1 - currentDifficulty.rimScale) * 100)}%`, 10, 30);
+        ctx.fillText(`🎯 Сложность: ${Math.round((1 - currentDifficulty.rimScale) * 100)}%`, 5, 20);
+        ctx.fillText(`🔥 Серия: ${comboSystem.shotsInRow}`, 5, 35);
     }
 
-    // ==================== ОБРАБОТЧИКИ МЫШИ/ТАЧА ====================
+    // ========== НОВЫЕ ОБРАБОТЧИКИ (натягивание с любой точки) ==========
     function getCanvasCoords(e) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
@@ -575,13 +786,13 @@
     function onPointerDown(e) {
         e.preventDefault();
         const { mx, my } = getCanvasCoords(e);
-        const dx = mx - ball.x;
-        const dy = my - ball.y;
-        if (Math.hypot(dx, dy) < ball.radius + 10) {
-            ball.isDragging = true;
-            ball.dragX = mx;
-            ball.dragY = my;
-        }
+        // Можно начинать тянуть из любой точки!
+        ball.isDragging = true;
+        ball.dragX = mx;
+        ball.dragY = my;
+        ball.startX = ball.x;
+        ball.startY = ball.y;
+        ball.dragStartTime = Date.now();
     }
 
     function onPointerMove(e) {
@@ -590,28 +801,45 @@
         const { mx, my } = getCanvasCoords(e);
         ball.dragX = mx;
         ball.dragY = my;
+        
+        // Обновляем шкалу силы
+        let dragDx = ball.x - mx;
+        let dragDy = ball.y - my;
+        let force = Math.min(1, Math.hypot(dragDx, dragDy) / 70);
+        updatePowerBar(force);
     }
 
     function onPointerUp(e) {
-        if (!ball.isDragging) {
-            return;
-        }
+        if (!ball.isDragging) return;
         e.preventDefault();
         ball.isDragging = false;
+        
         const { mx, my } = getCanvasCoords(e);
-        let forceX = (ball.x - mx) * 0.25;
-        let forceY = (ball.y - my) * 0.25;
-        forceX = Math.min(Math.max(forceX, -12), 12);
-        forceY = Math.min(Math.max(forceY, -15), 5);
+        let dragDx = ball.x - mx;
+        let dragDy = ball.y - my;
+        let force = Math.min(1, Math.hypot(dragDx, dragDy) / 70);
+        
+        // Сила броска зависит от натяжения
+        let forceX = dragDx * 0.4 * (0.8 + force * 0.5);
+        let forceY = dragDy * 0.4 * (0.8 + force * 0.5);
+        forceX = Math.min(Math.max(forceX, -16), 16);
+        forceY = Math.min(Math.max(forceY, -20), 10);
         ball.vx = forceX;
         ball.vy = forceY;
+        
+        resetPowerBar();
     }
 
-    // ==================== ИНИЦИАЛИЗАЦИЯ ====================
-    function gameLoop() {
-        updatePhysics();
-        draw();
-        requestAnimationFrame(gameLoop);
+    // ========== СОХРАНЕНИЕ ==========
+    function saveProgress() {
+        const saveData = {
+            coins: gameState.coins,
+            level: gameState.level,
+            skins: gameState.skins,
+            currentBallSkin: gameState.currentBallSkin,
+            totalScore: gameState.totalScore
+        };
+        localStorage.setItem('basketballGame', JSON.stringify(saveData));
     }
 
     function loadProgress() {
@@ -623,25 +851,23 @@
                 gameState.level = data.level || 1;
                 gameState.targetScore = 100 + (gameState.level - 1) * 25;
                 gameState.score = 0;
-                gameState.skins = data.skins || gameState.skins;
+                gameState.totalScore = data.totalScore || 0;
+                if (data.skins) gameState.skins = data.skins;
                 if (data.currentBallSkin) gameState.currentBallSkin = data.currentBallSkin;
                 updateUI();
             } catch(e) {}
         }
     }
 
-    function saveProgress() {
-        const saveData = {
-            coins: gameState.coins,
-            level: gameState.level,
-            skins: gameState.skins,
-            currentBallSkin: gameState.currentBallSkin
-        };
-        localStorage.setItem('basketballGame', JSON.stringify(saveData));
+    function gameLoop() {
+        updatePhysics();
+        draw();
+        requestAnimationFrame(gameLoop);
     }
 
     setInterval(() => saveProgress(), 5000);
 
+    // ========== НАСТРОЙКА СОБЫТИЙ ==========
     canvas.addEventListener('mousedown', onPointerDown);
     window.addEventListener('mousemove', onPointerMove);
     window.addEventListener('mouseup', onPointerUp);
@@ -649,24 +875,22 @@
     window.addEventListener('touchmove', onPointerMove);
     window.addEventListener('touchend', onPointerUp);
 
-    shopButton.onclick = () => {
-        renderShopItems();
-        shopModal.style.display = 'flex';
-    };
+    shopButton.onclick = () => { renderShopItems(); shopModal.style.display = 'flex'; };
+    donateButton.onclick = () => { renderDonateOptions(); donateModal.style.display = 'flex'; };
     closeModalBtn.onclick = () => shopModal.style.display = 'none';
-    window.onclick = (e) => { if (e.target === shopModal) shopModal.style.display = 'none'; };
-
-    nextLevelBtn.onclick = () => {
-        if (gameState.score > 0) {
-            levelUp();
-        } else {
-            showTempMessage('🎯 Сначала набери очки на этом уровне!');
-        }
-    };
+    closeDonateBtn.onclick = () => donateModal.style.display = 'none';
+    window.onclick = (e) => { if (e.target === shopModal) shopModal.style.display = 'none'; if (e.target === donateModal) donateModal.style.display = 'none'; };
+    nextLevelBtn.onclick = () => { if (gameState.score > 0) levelUp(); else showTempMessage('🎯 Сначала набери очки на этом уровне!'); };
 
     loadProgress();
     updateUI();
+    updateComboDisplay();
     gameLoop();
+    
+    if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+    }
 </script>
 </body>
 </html>
